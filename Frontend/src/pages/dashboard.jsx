@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useEffect } from "react";
 
 export default function Dashboard(){
     
@@ -28,17 +29,56 @@ export default function Dashboard(){
     return `${days} day${days > 1 ? "s" : ""} ago`;
   }
 
+  // Fetch all tasks from backend when component mounts
+  useEffect(() => {
+    fetchTasks();
+  });
 
-  const addTask = () => {
-    if (!newTask.trim()) return; // prevent empty tasks
-    const newTaskObj = {
-        id: Date.now(),
-        text: newTask, priority,
-        completed: false,
-        createdAt: Date.now()
+  // Get tasks
+  const fetchTasks = async () => {
+    try {
+      const res = await axios.get("http://localhost:3000/tasks");
+      setTasks(res.data);
+    } catch (err) {
+      console.error("Error fetching tasks:", err)
     }
-    setTasks([newTaskObj, ...tasks]);
-    setNewTask(""); // reset input
+  }
+
+  // Create task
+  const addTask = async () => {
+    if (!newTask.trim()) return; // prevent empty tasks
+    try {
+      const res = await axios.post("http://localhost:3000/tasks", {
+        title: newTask,
+        completed: false,
+      });
+      setTasks([...tasks, res.data]);
+      setNewTask("");
+    } catch (err) {
+      console.error("Error creating new task:", err.message);
+    }
+  }
+
+  // Toggle completion
+  const toggleComplete = async (id, currentStatus) => {
+    try {
+      const res = await axios.put(`http://localhost:3000/tasks/${id}`, {
+        completed: !currentStatus,
+      });
+      setTasks(tasks.map((t) => (t._id === id ? res.data : t)));
+    } catch (err) {
+      console.error("Error toggling task:", err.message);
+    }
+  };
+
+  // Delete task
+  const deleteTask = async (id) => {
+    try {
+      await axios.delete(`http://localhost:3000/tasks/${id}`);
+      setTasks(tasks.filter((t) => t._id !== id));
+    } catch (err) {
+      console.error("Error deleting task", err.message);
+    }
   }
 
   const filteredTasks = tasks.filter((task) => {
